@@ -1,31 +1,45 @@
 const express = require("express");
-const { default: makeWASocket, fetchLatestBaileysVersion } = require("@whiskeysockets/baileys");
+const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion } = require("@whiskeysockets/baileys");
+const pino = require("pino");
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+// 👉 root route
+app.get("/", (req, res) => {
+  res.send("✅ WhatsApp Pair Code Server is Running!");
+});
 
-app.post("/pair", async (req, res) => {
-    try {
-        const { number } = req.body; // body එකෙන් number ගන්නවා (94XXXXXXX format)
-        if (!number) return res.status(400).json({ error: "❌ Number required!" });
+// 👉 pair code route
+app.get("/pair", async (req, res) => {
+  const phoneNumber = req.query.number;
+  if (!phoneNumber) {
+    return res.status(400).json({ error: "⚠️ Please provide ?number=94XXXXXXXXX" });
+  }
 
-        const { version } = await fetchLatestBaileysVersion();
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState("./auth_info");
+    const { version } = await fetchLatestBaileysVersion();
 
-        const sock = makeWASocket({
-            version,
-            printQRInTerminal: false // browser එකේ QR print කරන්න ඕන නැහැ
-        });
+    const sock = makeWASocket({
+      logger: pino({ level: "silent" }),
+      auth: state,
+      version,
+    });
 
-        // Pairing code request
-        const code = await sock.requestPairingCode(number);
-        return res.json({ pair_code: code });
-    } catch (err) {
-        console.error("❌ Error:", err);
-        return res.status(500).json({ error: "Internal Server Error" });
-    }
+    sock.ev.on("creds.update", saveCreds);
+
+    // request pair code
+    const code = await sock.requestPairingCode(phoneNumber);
+    console.log("📌 Pair Code for", phoneNumber, "is:", code);
+
+    res.json({ number: phoneNumber, pairCode: code });
+  } catch (err) {
+    console.error("❌ Error generating pair code:", err.message);
+    res.status(500).json({ error: "Failed to generate pair code", details: err.message });
+  }
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 Pair Code API running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
