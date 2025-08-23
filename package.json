@@ -1,0 +1,17 @@
+{
+  "name": "Fernando-MD",
+  "version": "1.0.0",
+  "description": "Fernando-MD WhatsApp bot with full features",
+  "main": "index.js",
+  "scripts": {
+    "start": "pm2 start start.js --deep-monitoring --attach --name Fernando-MD",
+    "stop": "pm2 stop Fernando-MD",
+    "restart": "pm2 restart Fernando-MD"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.7",
+    "pino": "^9.0.0",
+    "qrcode-terminal": "^0.12.0",
+    "dotenv": "^16.0.3"
+  }
+}
