@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys')
+const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, useCodePairing } = require('@whiskeysockets/baileys')
 const pino = require('pino')
 
 async function startBot() {
@@ -7,18 +7,21 @@ async function startBot() {
 
     const sock = makeWASocket({
         logger: pino({ level: 'silent' }),
-        printQRInTerminal: true, // ✅ QR එක දැන් terminal එකේ print වෙනවා
         auth: state,
         version
     })
 
     sock.ev.on('creds.update', saveCreds)
 
+    // 👉 Pair Code method
+    if (!state.creds.registered) {
+        let phoneNumber = "94761549297"  // ✅ ඔබගේ WhatsApp නම්බර් (94 country code සමග)
+        let code = await useCodePairing(sock, phoneNumber)
+        console.log("📌 Your Pair Code is:", code)
+    }
+
     sock.ev.on('connection.update', (update) => {
-        const { connection, qr } = update
-        if (qr) {
-            console.log("📌 Scan me with WhatsApp:", qr)
-        }
+        const { connection } = update
         if (connection === 'open') {
             console.log("✅ Bot Connected Successfully!")
         }
