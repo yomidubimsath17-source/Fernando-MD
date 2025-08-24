@@ -1,15 +1,12 @@
 const express = require("express");
-const cors = require("cors"); // 👉 CORS import
-const { 
-  default: makeWASocket, 
-  useMultiFileAuthState, 
-  fetchLatestBaileysVersion 
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  fetchLatestBaileysVersion,
 } = require("@whiskeysockets/baileys");
 const pino = require("pino");
 
 const app = express();
-app.use(cors()); // 👉 Enable CORS
-
 const PORT = process.env.PORT || 3000;
 
 // 👉 root route
@@ -38,16 +35,33 @@ app.get("/pair", async (req, res) => {
 
     sock.ev.on("creds.update", saveCreds);
 
-    // request pair code
-    const code = await sock.requestPairingCode(phoneNumber);
-    console.log("📌 Pair Code for", phoneNumber, "is:", code);
+    // 👉 Retry logic for pair code
+    let retries = 0;
+    let code;
+    while (!code && retries < 5) {
+      try {
+        code = await sock.requestPairingCode(phoneNumber);
+      } catch (err) {
+        console.log(`⚠️ Retry ${retries + 1}: ${err.message}`);
+        retries++;
+        await new Promise((r) => setTimeout(r, 2000)); // wait 2s before retry
+      }
+    }
 
+    if (!code) {
+      return res.status(500).json({
+        error: "❌ Failed to generate pair code after retries",
+      });
+    }
+
+    console.log("📌 Pair Code for", phoneNumber, "is:", code);
     res.json({ number: phoneNumber, pairCode: code });
   } catch (err) {
     console.error("❌ Error generating pair code:", err.message);
-    res
-      .status(500)
-      .json({ error: "Failed to generate pair code", details: err.message });
+    res.status(500).json({
+      error: "Failed to generate pair code",
+      details: err.message,
+    });
   }
 });
 
