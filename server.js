@@ -1,8 +1,15 @@
 const express = require("express");
-const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion } = require("@whiskeysockets/baileys");
+const cors = require("cors"); // 👉 CORS import
+const { 
+  default: makeWASocket, 
+  useMultiFileAuthState, 
+  fetchLatestBaileysVersion 
+} = require("@whiskeysockets/baileys");
 const pino = require("pino");
 
 const app = express();
+app.use(cors()); // 👉 Enable CORS
+
 const PORT = process.env.PORT || 3000;
 
 // 👉 root route
@@ -14,7 +21,9 @@ app.get("/", (req, res) => {
 app.get("/pair", async (req, res) => {
   const phoneNumber = req.query.number;
   if (!phoneNumber) {
-    return res.status(400).json({ error: "⚠️ Please provide ?number=94XXXXXXXXX" });
+    return res
+      .status(400)
+      .json({ error: "⚠️ Please provide ?number=94XXXXXXXXX" });
   }
 
   try {
@@ -36,7 +45,9 @@ app.get("/pair", async (req, res) => {
     res.json({ number: phoneNumber, pairCode: code });
   } catch (err) {
     console.error("❌ Error generating pair code:", err.message);
-    res.status(500).json({ error: "Failed to generate pair code", details: err.message });
+    res
+      .status(500)
+      .json({ error: "Failed to generate pair code", details: err.message });
   }
 });
 
